@@ -30,7 +30,7 @@ from .resources import *
 # Import the code for the dialog
 from .captura_dialog import asignacionDialog
 import os
-import dotenv import load_dotenv
+from dotenv import load_dotenv
 import sqlite3
 import shutil
 import zipfile
@@ -42,7 +42,13 @@ from qgis.analysis import *
 import processing
 from processing.core.Processing import Processing
 
+load_dotenv(r"C:\Users\jaalo\AppData\Roaming\QGIS\QGIS3\profiles\Tunja_actualizacion\python\plugins\pluggin_git\.env")
 
+pg_dbname = os.getenv("DB_NAME")
+pg_user = os.getenv("DB_USER")
+pg_password = os.getenv("DB_PASSWORD")
+pg_host = os.getenv("DB_HOST")
+pg_port = os.getenv("DB_PORT")
 
 
 class asignacion:
@@ -77,7 +83,7 @@ class asignacion:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&asignacion_floridablanca')
+        self.menu = self.tr(u'&asignacion_tunja')
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -190,15 +196,13 @@ class asignacion:
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(
-                self.tr(u'&asignacion_floridablanca'),
+                self.tr(u'&asignacion_tunja'),
                 action)
             self.iface.removeToolBarIcon(action)
 
 
     def run(self):
-        
-        load_dotenv()
-        
+            
         self.dlg.show ()
         layers = QgsProject.instance().mapLayers().values()
         list_layer= []
@@ -254,10 +258,10 @@ class asignacion:
                 ruta_archivo = os.path.join(geopackage_folder,i)
                 capa = QgsVectorLayer(ruta_archivo + "|layername=lc_terreno")
                 ext= capa.extent()
-                xmin = ext.xMinimum()-100
-                ymin=ext.yMinimum()-100
-                xmax=ext.xMaximum()+100
-                ymax= ext.yMaximum()+100
+                xmin = ext.xMinimum()-25
+                ymin=ext.yMinimum()-25
+                xmax=ext.xMaximum()+25
+                ymax= ext.yMaximum()+25
                 ext= f'{xmin},{xmax},{ymin},{ymax}[EPSG:9377]'
                 processing.run("gdal:cliprasterbyextent", 
                     {'INPUT':raster,
@@ -276,15 +280,21 @@ class asignacion:
                 recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
                 recortes_ids = [feature['t_id'] for feature in recortes.getFeatures()]
                 parametros={
-                'INPUT':f"postgres://dbname={pg_dbname} host={pg_host} port={pg_port} "
-                            f"user='{pg_user}' password='{pg_password}' sslmode={pg_sslmode} "
-                            "key='t_id' checkPrimaryKeyUnicity='1' table=\"captura\".\"lc_predio\"",
+                'INPUT':f"postgres://dbname='{pg_dbname}' host={pg_host} port={pg_port} "
+                            f"user='{pg_user}' password='{pg_password}' sslmode=disable " 
+                            "key='t_id' checkPrimaryKeyUnicity='1' table=\"tunja_captura\".\"lc_predio\"",
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, recortes_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros)
 
-                
+       entrada = (f"postgres://dbname='{pg_dbname}' "  
+                  f"host={pg_host} " 
+                  f"port={pg_port} " 
+                  f"user='{pg_user}' " 
+                  f"password='{pg_password}' " 
+                  "sslmode=disable  "
+                  "key='t_id' ")        
 
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):
@@ -293,7 +303,7 @@ class asignacion:
                 lc_predio_ids = [feature['t_id'] for feature in interesados.getFeatures()]
                 
                 parametros={
-                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_interesado"',
+                'INPUT':entrada "checkPrimaryKeyUnicity=\'1\'" 'table="tunja_captura"."lc_interesado"',
                 'EXPRESSION': "lc_predio IN ('{}')".format("','".join(map(str, lc_predio_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_interesado\" (geom)".format(gpkg_path)
                 }
@@ -306,7 +316,7 @@ class asignacion:
                 lc_terreno_ids = [feature['t_id'] for feature in direccion.getFeatures()]
                 
                 parametros={
-                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_direccion"',
+                'INPUT':entrada "checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_direccion"',
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, lc_terreno_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_direccion\" (geom)".format(gpkg_path)
                 }
@@ -315,9 +325,9 @@ class asignacion:
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):      
                 gpkg_path = os.path.join(geopackage_folder, i)         #a partir de aca estoy empaquetando los que no tienen registros o pertenecen a los dominios
-                parametros2 = {'LAYERS':['postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."archivo"',
-                    'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_contacto"',
-                    'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="captura"."lc_unidadconstruccion" (geom)'],
+                parametros2 = {'LAYERS':[entrada "checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."archivo"',
+                    entrada checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_contacto"',
+                    entrada "srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_unidadconstruccion" (geom)'],
                 'OUTPUT': gpkg_path,
                 'OVERWRITE':False,
                 'SAVE_STYLES':True,
@@ -350,7 +360,7 @@ class asignacion:
                 recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
                 recortes_ids = [feature['t_id'] for feature in recortes.getFeatures()]
                 parametros3={
-                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_predio"',
+                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_predio"',
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, recortes_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio_inicial\" (geom)".format(gpkg_path)
                 }
