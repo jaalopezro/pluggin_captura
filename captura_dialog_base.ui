@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>asignacion_floridablanca</string>
+   <string>asignacion_Tunja</string>
   </property>
   <widget class="QDialogButtonBox" name="button_box">
    <property name="geometry">

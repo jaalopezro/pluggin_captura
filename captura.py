@@ -30,6 +30,7 @@ from .resources import *
 # Import the code for the dialog
 from .captura_dialog import asignacionDialog
 import os
+import dotenv import load_dotenv
 import sqlite3
 import shutil
 import zipfile
@@ -40,6 +41,7 @@ from qgis.analysis import *
 #Importar processing 
 import processing
 from processing.core.Processing import Processing
+
 
 
 
@@ -195,6 +197,8 @@ class asignacion:
 
     def run(self):
         
+        load_dotenv()
+        
         self.dlg.show ()
         layers = QgsProject.instance().mapLayers().values()
         list_layer= []
@@ -265,14 +269,16 @@ class asignacion:
                     'EXTRA':'',
                     'OUTPUT':os.path.join(geopackage_folder,i[:-5]+".tiff")}) 
         print("ortofoto cortada con exito")
-                
+                        
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):
                 gpkg_path = os.path.join(geopackage_folder, i)
                 recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
                 recortes_ids = [feature['t_id'] for feature in recortes.getFeatures()]
                 parametros={
-                'INPUT':'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_predio"',
+                'INPUT':f"postgres://dbname={pg_dbname} host={pg_host} port={pg_port} "
+                            f"user='{pg_user}' password='{pg_password}' sslmode={pg_sslmode} "
+                            "key='t_id' checkPrimaryKeyUnicity='1' table=\"captura\".\"lc_predio\"",
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, recortes_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio\" (geom)".format(gpkg_path)
                 }
@@ -287,7 +293,7 @@ class asignacion:
                 lc_predio_ids = [feature['t_id'] for feature in interesados.getFeatures()]
                 
                 parametros={
-                'INPUT':'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_interesado"',
+                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_interesado"',
                 'EXPRESSION': "lc_predio IN ('{}')".format("','".join(map(str, lc_predio_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_interesado\" (geom)".format(gpkg_path)
                 }
@@ -300,7 +306,7 @@ class asignacion:
                 lc_terreno_ids = [feature['t_id'] for feature in direccion.getFeatures()]
                 
                 parametros={
-                'INPUT':'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_direccion"',
+                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_direccion"',
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, lc_terreno_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_direccion\" (geom)".format(gpkg_path)
                 }
@@ -309,9 +315,9 @@ class asignacion:
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):      
                 gpkg_path = os.path.join(geopackage_folder, i)         #a partir de aca estoy empaquetando los que no tienen registros o pertenecen a los dominios
-                parametros2 = {'LAYERS':['postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."archivo"',
-                    'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_contacto"',
-                    'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="captura"."lc_unidadconstruccion" (geom)'],
+                parametros2 = {'LAYERS':['postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."archivo"',
+                    'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_contacto"',
+                    'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="captura"."lc_unidadconstruccion" (geom)'],
                 'OUTPUT': gpkg_path,
                 'OVERWRITE':False,
                 'SAVE_STYLES':True,
@@ -344,7 +350,7 @@ class asignacion:
                 recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
                 recortes_ids = [feature['t_id'] for feature in recortes.getFeatures()]
                 parametros3={
-                'INPUT':'postgres://dbname=\'actualizacion_cityland\' host=129.213.103.95 port=5432 user=\'cc1026287641\' password=\'DBA7641\' sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_predio"',
+                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="captura"."lc_predio"',
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, recortes_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio_inicial\" (geom)".format(gpkg_path)
                 }
