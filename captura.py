@@ -288,13 +288,7 @@ class asignacion:
                 }
                 processing.run("native:extractbyexpression", parametros)
 
-       entrada = (f"postgres://dbname='{pg_dbname}' "  
-                  f"host={pg_host} " 
-                  f"port={pg_port} " 
-                  f"user='{pg_user}' " 
-                  f"password='{pg_password}' " 
-                  "sslmode=disable  "
-                  "key='t_id' ")        
+                
 
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):
@@ -303,7 +297,7 @@ class asignacion:
                 lc_predio_ids = [feature['t_id'] for feature in interesados.getFeatures()]
                 
                 parametros={
-                'INPUT':entrada "checkPrimaryKeyUnicity=\'1\'" 'table="tunja_captura"."lc_interesado"',
+                'INPUT':f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."lc_interesado"',
                 'EXPRESSION': "lc_predio IN ('{}')".format("','".join(map(str, lc_predio_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_interesado\" (geom)".format(gpkg_path)
                 }
@@ -316,7 +310,7 @@ class asignacion:
                 lc_terreno_ids = [feature['t_id'] for feature in direccion.getFeatures()]
                 
                 parametros={
-                'INPUT':entrada "checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_direccion"',
+                'INPUT':f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."lc_direccion"',
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, lc_terreno_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_direccion\" (geom)".format(gpkg_path)
                 }
@@ -325,9 +319,9 @@ class asignacion:
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):      
                 gpkg_path = os.path.join(geopackage_folder, i)         #a partir de aca estoy empaquetando los que no tienen registros o pertenecen a los dominios
-                parametros2 = {'LAYERS':[entrada "checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."archivo"',
-                    entrada checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_contacto"',
-                    entrada "srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_unidadconstruccion" (geom)'],
+                parametros2 = {'LAYERS':[f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."archivo"',
+                    f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " table="tunja_captura"."lc_contacto"',
+                    f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " 'srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_unidadconstruccion" (geom)'],
                 'OUTPUT': gpkg_path,
                 'OVERWRITE':False,
                 'SAVE_STYLES':True,
