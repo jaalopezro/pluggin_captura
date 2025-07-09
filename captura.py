@@ -321,7 +321,7 @@ class asignacion:
                 gpkg_path = os.path.join(geopackage_folder, i)         #a partir de aca estoy empaquetando los que no tienen registros o pertenecen a los dominios
                 parametros2 = {'LAYERS':[f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."archivo"',
                     f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."lc_contacto"',
-                    f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " 'srid=9377 type=PointZ checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_unidadconstruccion" (geom)'],
+                    f"postgres://dbname='{pg_dbname}' " f"host={pg_host} " f"port={pg_port} " f"user='{pg_user}' " f"password='{pg_password}' " "sslmode=disable "  "key='t_id' " "srid=9377 " "type=PointZ " "checkPrimaryKeyUnicity='1' " 'table="tunja_captura"."lc_unidadconstruccion" (geometria)'],
                 'OUTPUT': gpkg_path,
                 'OVERWRITE':False,
                 'SAVE_STYLES':True,
@@ -354,11 +354,12 @@ class asignacion:
                 recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
                 recortes_ids = [feature['t_id'] for feature in recortes.getFeatures()]
                 parametros3={
-                'INPUT':'postgres://dbname={pg_dbname}host={pg_host} port={pg_port} user={pg_user} password={pg_password} sslmode=disable key=\'t_id\' checkPrimaryKeyUnicity=\'1\' table="tunja_captura"."lc_predio"',
+                'INPUT':f"postgres://dbname='{pg_dbname}' host={pg_host} port={pg_port} " f"user='{pg_user}' password='{pg_password}' sslmode=disable "  "key='t_id' checkPrimaryKeyUnicity='1' table=\"tunja_captura\".\"lc_predio\"",
                 'EXPRESSION': "lc_terreno IN ('{}')".format("','".join(map(str, recortes_ids))),
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio_inicial\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros3)
+                
 
         for raiz, dirs, archivos in os.walk(geopackage_folder):
             for archivo in archivos:
