@@ -33,8 +33,11 @@ import os
 from dotenv import load_dotenv
 import sqlite3
 import shutil
+import gc 
 import psycopg2
+import sys 
 import zipfile
+import time
 from qgis.core import * 
 from  qgis.utils import iface
 from qgis import analysis
@@ -42,6 +45,7 @@ from qgis.analysis import *
 #Importar processing 
 import processing
 from processing.core.Processing import Processing
+import pandas as pd
 
 load_dotenv(r"C:\Users\jaalo\AppData\Roaming\QGIS\QGIS3\profiles\Tunja_actualizacion\python\plugins\pluggin_git\.env")
 
@@ -200,8 +204,7 @@ class asignacion:
                 self.tr(u'&asignacion_tunja'),
                 action)
             self.iface.removeToolBarIcon(action)
-
-
+    
     def run(self):
             
         self.dlg.show ()
@@ -249,7 +252,10 @@ class asignacion:
                         tablename = sublayer.split('!!::!!')[1]
                         newname ="lc_terreno"
                         processing.run("native:spatialiteexecutesql", {'DATABASE':fullname,
-                            'SQL':'ALTER TABLE {0} RENAME TO {1}'.format(tablename, newname)}) 
+                            'SQL':'ALTER TABLE {0} RENAME TO {1}'.format(tablename, newname)})
+                        layer= None
+                        gc.collect () 
+                        
                     
         print ("Proceso de cambiar nombre de capa terrenos exitoso")
 
@@ -288,6 +294,8 @@ class asignacion:
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros)
+                recortes= None
+                gc.collect () 
                            
 
         for i in os.listdir(geopackage_folder):
@@ -302,6 +310,8 @@ class asignacion:
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_interesado\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros)
+                interesados= None
+                gc.collect () 
 
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):
@@ -315,6 +325,8 @@ class asignacion:
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_direccion\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros)
+                direccion= None
+                gc.collect () 
 
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):      
@@ -345,6 +357,8 @@ class asignacion:
                         nombre_subcapa = subcapa.split('!!::!!')[1]
                         sql = 'CREATE TRIGGER {0} AFTER INSERT ON "{0}" BEGIN UPDATE "{0}" SET t_id=new.fid WHERE fid=new.fid;END;'.format(nombre_subcapa.split('!!')[-1])
                         processing.run("native:spatialiteexecutesql", {'DATABASE': nombre_completo, 'SQL': sql})
+                        capa =None
+                        gc.collect()
                        
         print ("trigger creado con exito")
 
@@ -359,63 +373,9 @@ class asignacion:
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio_inicial\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros3)
-                
-        
-        # conn_info = {
-        #     "dbname": pg_dbname,
-        #     "user": pg_user,
-        #     "password": pg_password,
-        #     "host": pg_host,
-        #     "port": pg_port
-        # }
-
-        # try:
-        #     conn = psycopg2.connect(**conn_info)
-        #     cur = conn.cursor()
-        #     for i in os.listdir(geopackage_folder):
-        #         if i.endswith('.gpkg'):
-        #             gpkg_path = os.path.join(geopackage_folder, i)
-        #             recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
-        #             recortes_ids = [feature['asignacion'] for feature in recortes.getFeatures()]
-        #             recortes_ids_str = ",".join(f"'{rid}'" for rid in recortes_ids)          
-        #             query = f""" select lt.numero_predial,lp.matricula_inmobiliaria fmi , di.dispname tipo_persona, dd.dispname tipo_documento,
-        #                         concat_ws(' ',li.primer_nombre, li.segundo_nombre, li.primer_apellido, li.segundo_apellido, li.razon_social) nombre,
-        #                         case when lp.omision is not null then 'omision' end omision ,
-        #                         case when lp.comision is not null then 'comision' end comision ,
-        #                         case when lp.verificar_fmi  is not null then 'verificar FMI' end inconsistencia_fmi ,
-        #                         lp.posible_incorporacion incorporaciones ,
-        #                         case when lp.diferencia_area is not null then 'verificacion de linderos' end marca_area 
-        #                         from tunja_captura.lc_predio lp 
-        #                         left join tunja_captura.lc_terreno lt on lt.t_id =lp.lc_terreno
-        #                         left join tunja_captura.lc_interesado li on li.lc_predio =lp.t_id
-        #                         left join tunja_captura.d_interesadotipo di on di.t_id =li.tipo  
-        #                         left join tunja_captura.d_documentotipo dd  on dd.t_id =li.tipo_documento
-        #                         where lt.asignacion in ([{recortes_ids_str}])
-        #                         order by  lt.numero_predial, lp.matricula_inmobiliaria
-        #                         """
-        #             cur.execute(query)
-        #             resultados = cur.fetchall()            
-        #             columnas = [desc[0] for desc in cur.description]
-                    
-        #             wb = Workbook()
-        #             ws = wb.active
-        #             ws.title = "Consulta"
-
-        #             ws.append(columnas)
-
-        #             for fila in resultados:
-        #                 ws.append(fila)
-
-        #             nombre_salida = f"{i.replace('.gpkg', '')}.xlsx"
-        #             ruta_salida = os.path.join(geopackage_folder, nombre_salida)
-        #             wb.save(ruta_salida)
-        #             print(f"Archivo generado correctamente en: {ruta_salida}")
-
-        #     cur.close()
-        #     conn.close()
-                
-        # except Exception as e:
-        #     print(f"Error: {e}")
+                recortes =None
+                gc.collect()
+                     
 
         for raiz, dirs, archivos in os.walk(geopackage_folder):
             for archivo in archivos:
@@ -430,13 +390,79 @@ class asignacion:
                         nombre_subcapa = subcapa.split('!!::!!')[1]
                         sql = 'UPDATE "{0}" SET fid=t_id'.format(nombre_subcapa.split('!!')[-1])
                         processing.run("native:spatialiteexecutesql", {'DATABASE': nombre_completo, 'SQL': sql})
+                        capa =None
+                        gc.collect()
                        
         print ("update del fid hecho con exito")
         
-        for layer in QgsProject.instance().mapLayers().values():
-            if layer.source().lower().endswith('asignacion_null.gpkg'):
-                QgsProject.instance().removeMapLayer(layer)
+                        
+        # conn_info = {
+        #     "dbname": pg_dbname,
+        #     "user": pg_user,
+        #     "password": pg_password,
+        #     "host": pg_host,
+        #     "port": pg_port
+        # }
+        # try:
+        #     conn = psycopg2.connect(**conn_info)
+        #     cur = conn.cursor()
+        #     for i in os.listdir(geopackage_folder):
+        #         if i.endswith('.gpkg'):
+        #             gpkg_path = os.path.join(geopackage_folder, i)
+        #             recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
+        #             recortes_ids = [feature['asignacion'] for feature in recortes.getFeatures()]
+        #             recortes_ids_str = ",".join(f"'{rid}'" for rid in recortes_ids)          
+        #             query = f""" select lt.numero_predial,lp.matricula_inmobiliaria fmi , di.dispname tipo_persona, dd.dispname tipo_documento,
+        #                         concat_ws(' ',li.primer_nombre, li.segundo_nombre, li.primer_apellido, li.segundo_apellido, li.razon_social) nombre,
+        #                         case when lp.omision is not null then 'si' end omision ,
+        #                         case when lp.comision is not null then 'si' end comision ,
+        #                         case when lp.verificar_fmi  is not null then 'si' end inconsistencia_fmi ,
+        #                         lp.posible_incorporacion incorporaciones ,
+        #                         case when lp.diferencia_area is not null then 'verificacion de linderos' end marca_area 
+        #                         from tunja_captura.lc_predio lp 
+        #                         left join tunja_captura.lc_terreno lt on lt.t_id =lp.lc_terreno
+        #                         left join tunja_captura.lc_interesado li on li.lc_predio =lp.t_id
+        #                         left join tunja_captura.d_interesadotipo di on di.t_id =li.tipo  
+        #                         left join tunja_captura.d_documentotipo dd  on dd.t_id =li.tipo_documento
+        #                         where lt.asignacion in ({recortes_ids_str})
+        #                         order by  lt.numero_predial, lp.matricula_inmobiliaria
+        #                         """
+        #             cur.execute(query)
+        #             resultados = cur.fetchall()
+        #             columnas = [desc[0] for desc in cur.description]
 
+        #             df = pd.DataFrame(resultados, columns=columnas)
+
+        #             nombre_salida = f"{i.replace('.gpkg', '')}.csv"
+        #             ruta_salida = os.path.join(geopackage_folder, nombre_salida)
+        #             df.to_csv(ruta_salida, index=False, encoding="utf-8-sig")
+        #             recortes=None 
+        #             gc.collect()
+
+        #             print(f" Archivo csv generado correctamente en: {ruta_salida}")
+
+        # except Exception as e:
+        #     print(f"Error: {e}")
+
+        # finally:
+        #     try:
+        #         cur.close()
+        #         conn.close()
+        #     except:
+        #         pass
+        
+        for layer in QgsProject.instance().mapLayers().values():
+            if layer.source().endswith('.gpkg'):
+                QgsProject.instance().removeMapLayer(layer)
+        gc.collect()
+
+
+        layer = None
+        capa = None
+        recortes = None
+        interesados = None
+        direccion = None
+        gc.collect()
 
         archivos = os.listdir(geopackage_folder)
 
@@ -453,7 +479,8 @@ class asignacion:
                 else:
                     archivos_por_nombre[numero] = [archivo]
                     
-
+        time.sleep(0.3)
+        
         for llave, archivos in archivos_por_nombre.items():
             carpeta = os.path.join(geopackage_folder,llave[11:])
             if not os.path.exists(carpeta):
