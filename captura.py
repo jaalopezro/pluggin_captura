@@ -33,6 +33,7 @@ import os
 from dotenv import load_dotenv
 import sqlite3
 import shutil
+import psycopg2
 import zipfile
 from qgis.core import * 
 from  qgis.utils import iface
@@ -287,8 +288,7 @@ class asignacion:
                 'OUTPUT':"ogr:dbname='{}' table=\"lc_predio\" (geom)".format(gpkg_path)
                 }
                 processing.run("native:extractbyexpression", parametros)
-
-                
+                           
 
         for i in os.listdir(geopackage_folder):
             if i.endswith('.gpkg'):
@@ -360,6 +360,62 @@ class asignacion:
                 }
                 processing.run("native:extractbyexpression", parametros3)
                 
+        
+        # conn_info = {
+        #     "dbname": pg_dbname,
+        #     "user": pg_user,
+        #     "password": pg_password,
+        #     "host": pg_host,
+        #     "port": pg_port
+        # }
+
+        # try:
+        #     conn = psycopg2.connect(**conn_info)
+        #     cur = conn.cursor()
+        #     for i in os.listdir(geopackage_folder):
+        #         if i.endswith('.gpkg'):
+        #             gpkg_path = os.path.join(geopackage_folder, i)
+        #             recortes = QgsVectorLayer(gpkg_path+"|layername=lc_terreno")
+        #             recortes_ids = [feature['asignacion'] for feature in recortes.getFeatures()]
+        #             recortes_ids_str = ",".join(f"'{rid}'" for rid in recortes_ids)          
+        #             query = f""" select lt.numero_predial,lp.matricula_inmobiliaria fmi , di.dispname tipo_persona, dd.dispname tipo_documento,
+        #                         concat_ws(' ',li.primer_nombre, li.segundo_nombre, li.primer_apellido, li.segundo_apellido, li.razon_social) nombre,
+        #                         case when lp.omision is not null then 'omision' end omision ,
+        #                         case when lp.comision is not null then 'comision' end comision ,
+        #                         case when lp.verificar_fmi  is not null then 'verificar FMI' end inconsistencia_fmi ,
+        #                         lp.posible_incorporacion incorporaciones ,
+        #                         case when lp.diferencia_area is not null then 'verificacion de linderos' end marca_area 
+        #                         from tunja_captura.lc_predio lp 
+        #                         left join tunja_captura.lc_terreno lt on lt.t_id =lp.lc_terreno
+        #                         left join tunja_captura.lc_interesado li on li.lc_predio =lp.t_id
+        #                         left join tunja_captura.d_interesadotipo di on di.t_id =li.tipo  
+        #                         left join tunja_captura.d_documentotipo dd  on dd.t_id =li.tipo_documento
+        #                         where lt.asignacion in ([{recortes_ids_str}])
+        #                         order by  lt.numero_predial, lp.matricula_inmobiliaria
+        #                         """
+        #             cur.execute(query)
+        #             resultados = cur.fetchall()            
+        #             columnas = [desc[0] for desc in cur.description]
+                    
+        #             wb = Workbook()
+        #             ws = wb.active
+        #             ws.title = "Consulta"
+
+        #             ws.append(columnas)
+
+        #             for fila in resultados:
+        #                 ws.append(fila)
+
+        #             nombre_salida = f"{i.replace('.gpkg', '')}.xlsx"
+        #             ruta_salida = os.path.join(geopackage_folder, nombre_salida)
+        #             wb.save(ruta_salida)
+        #             print(f"Archivo generado correctamente en: {ruta_salida}")
+
+        #     cur.close()
+        #     conn.close()
+                
+        # except Exception as e:
+        #     print(f"Error: {e}")
 
         for raiz, dirs, archivos in os.walk(geopackage_folder):
             for archivo in archivos:
@@ -377,6 +433,10 @@ class asignacion:
                        
         print ("update del fid hecho con exito")
         
+        for layer in QgsProject.instance().mapLayers().values():
+            if layer.source().lower().endswith('asignacion_null.gpkg'):
+                QgsProject.instance().removeMapLayer(layer)
+
 
         archivos = os.listdir(geopackage_folder)
 
@@ -429,4 +489,5 @@ class asignacion:
             shutil.copy(plantilla,ruta)
             shutil.copy(dominios,ruta)
             shutil.copy(plantilla_validaciones,ruta)
-
+            
+ 
